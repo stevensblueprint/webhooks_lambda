@@ -10,7 +10,7 @@ export class WebhooksLambdaStack extends cdk.Stack {
     super(scope, id, props);
     const webhookLambda = new lambda.Function(this, "WebhookLambda", {
       runtime: lambda.Runtime.PYTHON_3_10,
-      handler: "main.handler",
+      handler: "src.main.handler",
       code: lambda.Code.fromAsset("functions/webhook-lambda", {
         bundling: {
           image: lambda.Runtime.PYTHON_3_10.bundlingImage,
