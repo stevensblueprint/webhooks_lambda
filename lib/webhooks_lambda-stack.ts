@@ -8,10 +8,10 @@ import * as targets from "aws-cdk-lib/aws-events-targets";
 export class WebhooksLambdaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    const webhookLambda = new lambda.Function(this, "WebhookLambda", {
+    const pipelineLambda = new lambda.Function(this, "PipelineLambda", {
       runtime: lambda.Runtime.PYTHON_3_10,
       handler: "src.main.handler",
-      code: lambda.Code.fromAsset("functions/webhook-lambda", {
+      code: lambda.Code.fromAsset("functions/pipeline-lambda", {
         bundling: {
           image: lambda.Runtime.PYTHON_3_10.bundlingImage,
           command: [
@@ -27,10 +27,11 @@ export class WebhooksLambdaStack extends cdk.Stack {
         PYTHONPATH:
           "/var/runtime:/opt/python/lib/python3.10/site-packages:/opt/python",
       },
-      description: "Lambda function to send pipeline status to Discord",
+      description:
+        "Lambda function to send pipeline status messages to Discord",
     });
 
-    webhookLambda.addToRolePolicy(
+    pipelineLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
           "codepipeline:GetPipelineExecution",
@@ -41,7 +42,7 @@ export class WebhooksLambdaStack extends cdk.Stack {
       })
     );
 
-    webhookLambda.addToRolePolicy(
+    pipelineLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
           "logs:CreateLogGroup",
@@ -65,7 +66,7 @@ export class WebhooksLambdaStack extends cdk.Stack {
     );
 
     pipelineStateChangeRule.addTarget(
-      new targets.LambdaFunction(webhookLambda)
+      new targets.LambdaFunction(pipelineLambda)
     );
 
     const stageStateChangeRule = new events.Rule(this, "StageStateChangeRule", {
@@ -75,7 +76,7 @@ export class WebhooksLambdaStack extends cdk.Stack {
         detailType: ["CodePipeline Stage Execution State Change"],
       },
     });
-    stageStateChangeRule.addTarget(new targets.LambdaFunction(webhookLambda));
+    stageStateChangeRule.addTarget(new targets.LambdaFunction(pipelineLambda));
 
     const actionStateChangeRule = new events.Rule(
       this,
@@ -88,10 +89,10 @@ export class WebhooksLambdaStack extends cdk.Stack {
         },
       }
     );
-    actionStateChangeRule.addTarget(new targets.LambdaFunction(webhookLambda));
+    actionStateChangeRule.addTarget(new targets.LambdaFunction(pipelineLambda));
 
     new cdk.CfnOutput(this, "MonitorLambdaFunctionName", {
-      value: webhookLambda.functionName,
+      value: pipelineLambda.functionName,
       description: "Name of the Lambda function monitoring CodePipeline events",
     });
   }
